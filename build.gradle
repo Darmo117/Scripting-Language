@@ -1,0 +1,47 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+
+version = '0.1d'
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+compileJava.options.encoding = 'UTF-8'
+
+// Creates the jar with all dependencies included inside
+task fatJar(type: Jar) {
+  manifest {
+    attributes 'Main-Class': 'net.darmo_creations.scripting.Start',
+               'Class-Path': '.'
+  }
+  // Packs all dependencies into the jar.
+  from {
+    configurations.compile.collect {
+      it.isDirectory() ? it : zipTree(it)
+    }
+  }
+  with jar
+  // end
+}
+
+// Creates the distributable jar
+task createZip(type: Zip) {
+  from '/'
+  include 'LICENSE' // License file if you have one
+  from 'build/libs/'
+  include 'Scripting-Language-' + version + '.jar'
+  archiveName 'Scripting-Language-' + version + '.zip'
+  destinationDir(file('/'))
+}
+
+// Where to find the project's dependencies
+repositories {
+  jcenter()
+}
+
+dependencies {
+  // The production code uses the SLF4J logging API at compile time
+  compile 'org.slf4j:slf4j-api:1.7.21'
+  // JUnit
+  testCompile 'junit:junit:4.12'
+}
+
