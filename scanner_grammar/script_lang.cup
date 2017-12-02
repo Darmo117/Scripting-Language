@@ -1,0 +1,175 @@
+import java.util.List;
+import java.util.ArrayList;
+
+import java_cup.runtime.Symbol;
+
+import net.darmo_creations.scripting.statements.*;
+import net.darmo_creations.scripting.expressions.*;
+
+parser code {:
+  // TODO add symbols table
+
+  public void report_error(String message, Object info) {
+    StringBuilder m = new StringBuilder("Error");
+
+    if (info instanceof Symbol) {
+      Symbol s = (Symbol) info;
+
+      if (s.left >= 0) {
+        m.append(" at line ").append(s.left + 1);
+        if (s.right >= 0)
+          m.append(", column ").append(s.right + 1);
+      }
+    }
+    m.append(" : ").append(message);
+
+    throw new RuntimeException(m.toString());
+  }
+
+  public void report_fatal_error(String message, Object info) {
+    report_error(message, info);
+  }
+:};
+
+terminal KW_LET, KW_IF, KW_ELSE, KW_WHILE, KW_UNTIL, KW_FOR, KW_BREAK, KW_CONTINUE, KW_FUNCTION, KW_RETURN, KW_NULL;
+terminal SEMI_COLON, COLON, COMMA, LPAREN, RPAREN, LBRACKET, RBRACKET, LCURLY, RCURLY;
+terminal PLUS, MINUS, STAR, SLASH, PERCENT, DOUBLE_STAR, EXCL, DOUBLE_AND, DOUBLE_PIPE, AND, PIPE, TILDE, CIRCUMFLEX;
+terminal EQ, DOUBLE_EQ, EXCL_EQ, LANGLE, RANGLE, LANGLE_EQ, RANGLE_EQ, PLUS_EQ, MINUS_EQ, STAR_EQ, SLASH_EQ, PERCENT_EQ, AND_EQ, PIPE_EQ, TILDE_EQ, CIRCUM_EQ;
+terminal Double NUMBER;
+terminal String ID, STRING;
+
+non terminal program;
+non terminal List<Statement> stmt_list, init_for, init_for_seq, stmt_list_function;
+non terminal Statement stmt, decl, var_decl, function_decl, test, loop;
+non terminal Expression expr_opt, expr, expr_no_assign, arith_op, assign, function_call, args_opt, args;
+non terminal List<String> args_decl_opt, args_decl;
+
+// TODO add precedence for all operands
+precedence left PLUS, MINUS;
+precedence left STAR, SLASH, PERCENT;
+precedence right DOUBLE_STAR; // right or left ?
+
+program ::= stmt_list
+  {: ; :}
+;
+
+stmt_list ::=
+  /* empty */         {: ; :}
+| stmt:s stmt_list:l  {: ; :}
+;
+
+stmt ::=
+  expr_opt:e SEMI_COLON
+| decl
+| test
+| loop
+;
+
+decl ::=
+  var_decl:v SEMI_COLON
+| function_decl
+;
+
+var_decl ::=
+  KW_LET ID:var
+  {: ; :}
+| KW_LET ID:var EQ expr:e
+  {: ; :}
+;
+
+function_decl ::= KW_FUNCTION ID:name LPAREN args_decl_opt:args RPAREN LCURLY stmt_list_function:l RCURLY
+  {: ; :}
+;
+
+stmt_list_function ::=
+  stmt_list
+| KW_RETURN expr SEMI_COLON
+;
+
+args_decl_opt ::=
+  /* empty */
+| args_decl
+;
+
+args_decl ::=
+  ID
+| ID COMMA args_decl
+;
+
+expr_opt ::=
+  /* empty */ // TODO return Nop exression
+| expr
+;
+
+expr ::=
+  LPAREN expr:e RPAREN
+| NUMBER
+| STRING
+| ID
+| arith_op:ops
+| assign:a
+| function_call;
+;
+
+expr_no_assign ::=
+  LPAREN expr:e RPAREN
+| NUMBER
+| STRING
+| ID
+| arith_op:ops
+| function_call;
+;
+
+assign ::=
+  ID:var EQ expr:e         {: ; :}
+| ID:var PLUS_EQ expr:e    {: ; :}
+| ID:var MINUS_EQ expr:e   {: ; :}
+| ID:var STAR_EQ expr:e    {: ; :}
+| ID:var SLASH_EQ expr:e   {: ; :}
+| ID:var PERCENT_EQ expr:e {: ; :}
+// TODO other assignments
+;
+
+arith_op ::=
+  expr_no_assign:e1 PLUS expr_no_assign:e2
+| expr_no_assign:e1 MINUS expr_no_assign:e2
+| expr_no_assign:e1 STAR expr_no_assign:e2
+| expr_no_assign:e1 SLASH expr_no_assign:e2
+| expr_no_assign:e1 PERCENT expr_no_assign:e2
+// TODO other operators
+;
+
+function_call ::= ID LPAREN args_opt RPAREN
+;
+
+args_opt ::=
+  /**/
+| args
+;
+
+args ::=
+  expr
+| expr COMMA expr
+;
+
+test ::=
+  KW_IF LPAREN expr RPAREN LCURLY stmt_list RCURLY
+| KW_IF LPAREN expr RPAREN LCURLY stmt_list RCURLY KW_ELSE LCURLY stmt_list RCURLY
+| KW_IF LPAREN expr RPAREN LCURLY stmt_list RCURLY KW_ELSE test
+;
+
+loop ::=
+  KW_WHILE expr LCURLY stmt_list RCURLY
+| KW_UNTIL expr LCURLY stmt_list RCURLY
+| KW_FOR LPAREN init_for SEMI_COLON expr_opt SEMI_COLON expr_opt RPAREN LCURLY stmt_list RCURLY
+;
+
+init_for ::=
+  /* empty */
+| KW_LET ID:var EQ expr:e init_for_seq
+;
+
+init_for_seq ::=
+  /* empty */
+| COMMA ID:var EQ expr:e init_for_seq
+;
