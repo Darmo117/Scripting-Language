@@ -29,7 +29,7 @@ import net.darmo_creations.scripting.expressions.Expression;
  * @author Damien Vergnet
  */
 public final class ReturnStatement extends Statement {
-  /** Special variable name used to return a result */
+  /** Special variable name used to return a result. */
   public static final String RETURN_VAR_NAME = "#return";
 
   private final Expression expr;

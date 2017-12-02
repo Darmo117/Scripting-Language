@@ -154,7 +154,7 @@ public class Context {
     }
 
     public boolean returnVariableExists() {
-      return this.variables.containsKey(ReturnStatement.RETURN_VAR_NAME);
+      return this.variables.containsKey(ReturnStatement.RETURN_VAR_NAME) || this.parentScope.returnVariableExists();
     }
 
     public void declareVariable(String name, Value value) {
